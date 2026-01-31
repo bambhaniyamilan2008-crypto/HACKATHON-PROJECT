@@ -1,7 +1,9 @@
-
 'use client';
 
-import { useState } from 'react';
+// Yeh line build error rokne ke liye zaroori hai
+export const dynamic = 'force-dynamic';
+
+import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/dashboard/page-header';
 import {
   Card,
@@ -13,17 +15,11 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { CheckCircle, XCircle, Clock, Calendar as CalendarIcon } from 'lucide-react';
-import { DayPicker, DayProps } from 'react-day-picker';
-
-type AttendanceStatus = 'Present' | 'Absent' | 'Late';
-
-type AttendanceRecord = {
-  date: Date;
-  status: AttendanceStatus;
-};
+import { DayPicker } from 'react-day-picker';
 
 // Mock data for demonstration
-const attendanceData: AttendanceRecord[] = [
+// Note: Real app mein yeh data API se aayega
+const attendanceData = [
   { date: new Date(new Date().getFullYear(), new Date().getMonth(), 1), status: 'Present' },
   { date: new Date(new Date().getFullYear(), new Date().getMonth(), 2), status: 'Present' },
   { date: new Date(new Date().getFullYear(), new Date().getMonth(), 3), status: 'Absent' },
@@ -38,9 +34,16 @@ const attendanceData: AttendanceRecord[] = [
   { date: new Date(new Date().getFullYear(), new Date().getMonth(), 16), status: 'Present' },
 ];
 
-function Day(props: DayProps) {
+function Day(props) {
+    const { date, displayMonth } = props;
+    
+    // SAFETY CHECK: Agar date undefined hai toh crash nahi hoga
+    if (!date) {
+        return <DayPicker.Day {...props} />;
+    }
+
     const record = attendanceData.find(
-      (d) => d.date.toDateString() === props.date.toDateString()
+      (d) => d.date && d.date.toDateString() === date.toDateString()
     );
   
     const dayClassName = cn('relative h-full w-full p-0', {
@@ -64,15 +67,26 @@ function Day(props: DayProps) {
 }
 
 export default function AttendancePage() {
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
-  
+  // Hydration mismatch avoid karne ke liye initial state null rakhein
+  const [date, setDate] = useState(new Date());
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Calculations
   const presentDays = attendanceData.filter(d => d.status === 'Present').length;
   const absentDays = attendanceData.filter(d => d.status === 'Absent').length;
   const lateDays = attendanceData.filter(d => d.status === 'Late').length;
   const totalDays = attendanceData.length;
   const attendancePercentage = totalDays > 0 ? ((presentDays + lateDays) / totalDays) * 100 : 100;
 
+  // Prevent hydration errors by not rendering until mounted
+  if (!isMounted) {
+    return null; 
+  }
 
   return (
     <div>
