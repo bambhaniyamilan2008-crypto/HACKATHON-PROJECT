@@ -1,0 +1,951 @@
+
+{
+  "entities": {
+    "SchoolProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SchoolProfile",
+      "type": "object",
+      "description": "Represents the profile of a school, including its name, address, and other relevant details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the school profile."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the school."
+        },
+        "address": {
+          "type": "string",
+          "description": "Address of the school."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the school.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number of the school."
+        },
+        "logoUrl": {
+          "type": "string",
+          "description": "URL of the school's logo.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "AcademicYear": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AcademicYear",
+      "type": "object",
+      "description": "Represents an academic year, including its start and end dates.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the academic year."
+        },
+        "schoolProfileId": {
+          "type": "string",
+          "description": "Reference to SchoolProfile. (Relationship: SchoolProfile 1:N AcademicYear)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the academic year (e.g., 2023-2024)."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date of the academic year.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "End date of the academic year.",
+          "format": "date-time"
+        },
+        "isCurrent": {
+          "type": "boolean",
+          "description": "Indicates if the academic year is the current one."
+        }
+      },
+      "required": [
+        "id",
+        "schoolProfileId",
+        "name",
+        "startDate",
+        "endDate"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the system, including common profile information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the user (e.g., Admin, Teacher, Student, Parent)."
+        },
+        "profileImageUrl": {
+          "type": "string",
+          "description": "Profile image URL for user."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "role"
+      ]
+    },
+    "Teacher": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Teacher",
+      "type": "object",
+      "description": "Represents a teacher in the system, extending user information with teacher-specific details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the teacher."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Teacher)"
+        },
+        "schoolProfileId": {
+          "type": "string",
+          "description": "Reference to SchoolProfile. (Relationship: SchoolProfile 1:N Teacher)"
+        },
+        "subjects": {
+          "type": "array",
+          "description": "List of subjects taught by the teacher.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "schoolProfileId"
+      ]
+    },
+    "Student": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Student",
+      "type": "object",
+      "description": "Represents a student in the system, extending user information with student-specific details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the student."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Student)"
+        },
+        "schoolProfileId": {
+          "type": "string",
+          "description": "Reference to SchoolProfile. (Relationship: SchoolProfile 1:N Student)"
+        },
+        "admissionNumber": {
+          "type": "string",
+          "description": "Admission number of the student."
+        },
+        "classId": {
+          "type": "string",
+          "description": "Reference to Class. (Relationship: Class 1:N Student)"
+        },
+        "parentIds": {
+          "type": "array",
+          "description": "References to Parents. (Relationship: Parent 1:N Student)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "schoolProfileId",
+        "admissionNumber",
+        "classId"
+      ]
+    },
+    "Parent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Parent",
+      "type": "object",
+      "description": "Represents a parent in the system, extending user information with parent-specific details.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the parent."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 Parent)"
+        },
+        "schoolProfileId": {
+          "type": "string",
+          "description": "Reference to SchoolProfile. (Relationship: SchoolProfile 1:N Parent)"
+        },
+        "studentIds": {
+          "type": "array",
+          "description": "References to Students. (Relationship: Parent 1:N Student)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "schoolProfileId"
+      ]
+    },
+    "Class": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Class",
+      "type": "object",
+      "description": "Represents a class or grade level in the school.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the class."
+        },
+        "schoolProfileId": {
+          "type": "string",
+          "description": "Reference to SchoolProfile. (Relationship: SchoolProfile 1:N Class)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the class (e.g., Grade 10, Section A)."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to Teacher. (Relationship: Teacher 1:N Class)"
+        }
+      },
+      "required": [
+        "id",
+        "schoolProfileId",
+        "name",
+        "teacherId"
+      ]
+    },
+    "Subject": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Subject",
+      "type": "object",
+      "description": "Represents a subject taught in the school.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the subject."
+        },
+        "schoolProfileId": {
+          "type": "string",
+          "description": "Reference to SchoolProfile. (Relationship: SchoolProfile 1:N Subject)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the subject (e.g., Mathematics, Science)."
+        },
+        "teacherIds": {
+          "type": "array",
+          "description": "References to Teachers. (Relationship: Subject N:N Teacher)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "classIds": {
+          "type": "array",
+          "description": "References to Classes. (Relationship: Subject N:N Class)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "schoolProfileId",
+        "name"
+      ]
+    },
+    "Assignment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Assignment",
+      "type": "object",
+      "description": "Represents an assignment given to students.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the assignment."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to Teacher. (Relationship: Teacher 1:N Assignment)"
+        },
+        "classId": {
+          "type": "string",
+          "description": "Reference to Class. (Relationship: Class 1:N Assignment)"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Reference to Subject. (Relationship: Subject 1:N Assignment)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the assignment."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the assignment."
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "Due date for the assignment.",
+          "format": "date-time"
+        },
+        "attachments": {
+          "type": "array",
+          "description": "References to Attachments. (Relationship: Assigment 1:N Attachment)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "teacherId",
+        "classId",
+        "subjectId",
+        "title",
+        "description",
+        "dueDate"
+      ]
+    },
+    "Attachment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Attachment",
+      "type": "object",
+      "description": "Represents an attachment to an assignment.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the attachment."
+        },
+        "assignmentId": {
+          "type": "string",
+          "description": "Reference to Assignment. (Relationship: Assignment 1:N Attachment)"
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Name of the file."
+        },
+        "fileUrl": {
+          "type": "string",
+          "description": "URL of the file.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "assignmentId",
+        "fileName",
+        "fileUrl"
+      ]
+    },
+    "Attendance": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Attendance",
+      "type": "object",
+      "description": "Represents student attendance records.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the attendance record."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N Attendance)"
+        },
+        "classId": {
+          "type": "string",
+          "description": "Reference to Class. (Relationship: Class 1:N Attendance)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the attendance record.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Attendance status (e.g., Present, Absent, Late)."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "classId",
+        "date",
+        "status"
+      ]
+    },
+    "Exam": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Exam",
+      "type": "object",
+      "description": "Represents an exam.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the exam."
+        },
+        "schoolProfileId": {
+          "type": "string",
+          "description": "Reference to SchoolProfile. (Relationship: SchoolProfile 1:N Exam)"
+        },
+        "classId": {
+          "type": "string",
+          "description": "Reference to Class. (Relationship: Class 1:N Exam)"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Reference to Subject. (Relationship: Subject 1:N Exam)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the exam (e.g., Midterm Exam, Final Exam)."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the exam.",
+          "format": "date-time"
+        },
+        "totalMarks": {
+          "type": "number",
+          "description": "Total marks for the exam."
+        }
+      },
+      "required": [
+        "id",
+        "schoolProfileId",
+        "classId",
+        "subjectId",
+        "name",
+        "date",
+        "totalMarks"
+      ]
+    },
+    "Result": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Result",
+      "type": "object",
+      "description": "Represents the result of a student in an exam.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the result."
+        },
+        "examId": {
+          "type": "string",
+          "description": "Reference to Exam. (Relationship: Exam 1:N Result)"
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N Result)"
+        },
+        "marksObtained": {
+          "type": "number",
+          "description": "Marks obtained by the student in the exam."
+        }
+      },
+      "required": [
+        "id",
+        "examId",
+        "studentId",
+        "marksObtained"
+      ]
+    },
+    "Notice": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notice",
+      "type": "object",
+      "description": "Represents a notice or announcement.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the notice."
+        },
+        "schoolProfileId": {
+          "type": "string",
+          "description": "Reference to SchoolProfile. (Relationship: SchoolProfile 1:N Notice)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the notice."
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the notice."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the notice.",
+          "format": "date-time"
+        },
+        "audience": {
+          "type": "string",
+          "description": "Audience for the notice (e.g., All, Teachers, Students, Parents)."
+        }
+      },
+      "required": [
+        "id",
+        "schoolProfileId",
+        "title",
+        "content",
+        "date",
+        "audience"
+      ]
+    },
+    "FeePayment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FeePayment",
+      "type": "object",
+      "description": "Represents a fee payment made by a student or parent.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the fee payment."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student. (Relationship: Student 1:N FeePayment)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount paid."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "Date of the payment.",
+          "format": "date-time"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment method (e.g., Online, Cash, Check)."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "amount",
+        "paymentDate",
+        "paymentMethod"
+      ]
+    },
+    "AIModel": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AIModel",
+      "type": "object",
+      "description": "Represents an AI model used within the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AI model."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the AI model (e.g., Chatbot, Text Summarizer)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the AI model."
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the AI model."
+        },
+        "endpointUrl": {
+          "type": "string",
+          "description": "API endpoint URL for the AI model.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "version",
+        "endpointUrl"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "google.com"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/school_profiles/{schoolProfileId}",
+        "definition": {
+          "entityName": "SchoolProfile",
+          "schema": {
+            "$ref": "#/backend/entities/SchoolProfile"
+          },
+          "description": "Stores school profile information. Accessible to admins.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/academic_years/{academicYearId}",
+        "definition": {
+          "entityName": "AcademicYear",
+          "schema": {
+            "$ref": "#/backend/entities/AcademicYear"
+          },
+          "description": "Stores academic years for a specific school. Requires 'schoolProfileId' to be denormalized in each 'academicYear' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "academicYearId",
+              "description": "Unique identifier for the academic year."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information. Access restricted to the user and admins.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "Unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/teachers/{teacherId}",
+        "definition": {
+          "entityName": "Teacher",
+          "schema": {
+            "$ref": "#/backend/entities/Teacher"
+          },
+          "description": "Stores teacher information for a specific school. Requires 'schoolProfileId' to be denormalized in each 'teacher' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "teacherId",
+              "description": "Unique identifier for the teacher."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/students/{studentId}",
+        "definition": {
+          "entityName": "Student",
+          "schema": {
+            "$ref": "#/backend/entities/Student"
+          },
+          "description": "Stores student information for a specific school. Requires 'schoolProfileId' and 'classId' to be denormalized in each 'student' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "studentId",
+              "description": "Unique identifier for the student."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/parents/{parentId}",
+        "definition": {
+          "entityName": "Parent",
+          "schema": {
+            "$ref": "#/backend/entities/Parent"
+          },
+          "description": "Stores parent information for a specific school. Requires 'schoolProfileId' to be denormalized in each 'parent' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "parentId",
+              "description": "Unique identifier for the parent."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/classes/{classId}",
+        "definition": {
+          "entityName": "Class",
+          "schema": {
+            "$ref": "#/backend/entities/Class"
+          },
+          "description": "Stores class information for a specific school. Requires 'schoolProfileId' and 'teacherId' to be denormalized in each 'class' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "classId",
+              "description": "Unique identifier for the class."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/subjects/{subjectId}",
+        "definition": {
+          "entityName": "Subject",
+          "schema": {
+            "$ref": "#/backend/entities/Subject"
+          },
+          "description": "Stores subject information for a specific school. Requires 'schoolProfileId' to be denormalized in each 'subject' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "subjectId",
+              "description": "Unique identifier for the subject."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/assignments/{assignmentId}",
+        "definition": {
+          "entityName": "Assignment",
+          "schema": {
+            "$ref": "#/backend/entities/Assignment"
+          },
+          "description": "Stores assignment information. Requires 'schoolProfileId', 'teacherId', and 'classId' to be denormalized in each 'assignment' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "assignmentId",
+              "description": "Unique identifier for the assignment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/assignments/{assignmentId}/attachments/{attachmentId}",
+        "definition": {
+          "entityName": "Attachment",
+          "schema": {
+            "$ref": "#/backend/entities/Attachment"
+          },
+          "description": "Stores attachment information for assignments. Requires 'schoolProfileId', 'teacherId', 'classId', and 'assignmentId' to be denormalized in each 'attachment' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "assignmentId",
+              "description": "Unique identifier for the assignment."
+            },
+            {
+              "name": "attachmentId",
+              "description": "Unique identifier for the attachment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/attendance/{attendanceId}",
+        "definition": {
+          "entityName": "Attendance",
+          "schema": {
+            "$ref": "#/backend/entities/Attendance"
+          },
+          "description": "Stores attendance records. Requires 'schoolProfileId', 'studentId', and 'classId' to be denormalized in each 'attendance' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "attendanceId",
+              "description": "Unique identifier for the attendance record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/exams/{examId}",
+        "definition": {
+          "entityName": "Exam",
+          "schema": {
+            "$ref": "#/backend/entities/Exam"
+          },
+          "description": "Stores exam information. Requires 'schoolProfileId', 'classId', and 'subjectId' to be denormalized in each 'exam' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "examId",
+              "description": "Unique identifier for the exam."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/exams/{examId}/results/{resultId}",
+        "definition": {
+          "entityName": "Result",
+          "schema": {
+            "$ref": "#/backend/entities/Result"
+          },
+          "description": "Stores exam results. Requires 'schoolProfileId', 'classId', 'subjectId', 'examId', and 'studentId' to be denormalized in each 'result' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "examId",
+              "description": "Unique identifier for the exam."
+            },
+            {
+              "name": "resultId",
+              "description": "Unique identifier for the result."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/notices/{noticeId}",
+        "definition": {
+          "entityName": "Notice",
+          "schema": {
+            "$ref": "#/backend/entities/Notice"
+          },
+          "description": "Stores notices and announcements. Requires 'schoolProfileId' to be denormalized in each 'notice' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "noticeId",
+              "description": "Unique identifier for the notice."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/school_profiles/{schoolProfileId}/fee_payments/{feePaymentId}",
+        "definition": {
+          "entityName": "FeePayment",
+          "schema": {
+            "$ref": "#/backend/entities/FeePayment"
+          },
+          "description": "Stores fee payment information. Requires 'schoolProfileId' and 'studentId' to be denormalized in each 'feePayment' document to ensure authorization independence.",
+          "params": [
+            {
+              "name": "schoolProfileId",
+              "description": "Unique identifier for the school profile."
+            },
+            {
+              "name": "feePaymentId",
+              "description": "Unique identifier for the fee payment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/ai_models/{aiModelId}",
+        "definition": {
+          "entityName": "AIModel",
+          "schema": {
+            "$ref": "#/backend/entities/AIModel"
+          },
+          "description": "Stores AI model information.  Accessible only to admins.",
+          "params": [
+            {
+              "name": "aiModelId",
+              "description": "Unique identifier for the AI model."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "adminRole",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Document existence determines admin role. No content required.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "User ID of the admin."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, Clarity of Intent, and support secure list operations (QAPs). It leverages denormalization to avoid hierarchical authorization dependencies and structural segregation for homogeneous security postures.  \n\nAuthorization Independence is achieved by denormalizing authorization data (e.g., schoolProfileId in collections like 'teachers', 'students', and 'classes') into each document. This eliminates the need for `get()` calls in security rules to verify parent-child relationships.\n\nStructural Segregation is applied by separating data based on access requirements.  Each collection is designed to have a clear and consistent security posture.  For instance, user profiles are stored under `/users/{userId}`, enforcing path-based ownership.\n\nQAPs (Rules are not Filters) are supported through structural segregation and the membership map pattern where applicable.  List operations are secured because each collection has a homogeneous security posture, meaning rules can be written to allow or deny access to entire collections based on the user's role and relationship to the data.  Since rules are not filters, we can ensure that users only retrieve data they are authorized to see.\n\nAccess Modeling follows standardized patterns. Private data is primarily managed through path-based ownership (`/users/{userId}`). Collaborative data, if required (though not explicitly outlined in the requirements), would use the Membership Map (`members: {uid1: \"role\", uid2: \"role\"}`). Global roles are managed via the existence of documents in dedicated role collections (e.g., `/roles_admin/{uid}`)."
+  }
+}

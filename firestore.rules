@@ -1,0 +1,307 @@
+/**
+ * # Core Philosophy
+ * This ruleset establishes a multi-tenant security model centered around "School Profiles" with a global administrative role. The primary goal is to ensure that all school-related data is strictly controlled and can only be managed by authorized administrators. User data is kept separate and private, accessible only to the owning user or an administrator.
+ *
+ * # Data Structure
+ * - `/users/{userId}`: Contains private user profile data. Each user can manage their own document.
+ * - `/school_profiles/{schoolProfileId}`: A top-level collection representing a school. All data related to a specific school (classes, students, teachers, etc.) is nested within its corresponding school profile document.
+ * - `/roles_admin/{userId}`: A lookup collection where the existence of a document signifies that the user is a global administrator.
+ * - `/ai_models/{aiModelId}`: A collection for managing AI model configurations, accessible only to administrators.
+ *
+ * # Key Security Decisions
+ * - **Admin-Only School Management**: All collections nested under `/school_profiles/{schoolProfileId}` are restricted to administrators for all operations (read, create, update, delete). This provides a highly secure default for managing sensitive school data. More granular access (e.g., for teachers or students) would require significant denormalization of user IDs onto documents and more complex rules.
+ * - **Strict User Privacy**: Users can only access their own document within the `/users` collection. Listing all users is explicitly forbidden for non-admins to protect user privacy.
+ * - **Role-Based Access Control (RBAC)**: A global "admin" role is implemented via a lookup in the `/roles_admin` collection. This provides a clear and centralized way to manage administrative privileges.
+ * - **No Unauthenticated Access**: All access to the database requires a user to be signed in.
+ *
+ * # Denormalization for Authorization
+ * The ruleset assumes that documents within subcollections (e.g., a "class" document) contain a denormalized `schoolProfileId` field. This allows rules to verify that a document belongs to the correct parent school without performing costly and slow cross-document `get()` calls. This principle is enforced on `create` and `update` operations to maintain relational integrity.
+ *
+ * # Structural Segregation
+ * The data is segregated into top-level collections (`users`, `school_profiles`, `ai_models`) based on their distinct security requirements. This separation creates a clear, maintainable, and performant ruleset, especially for list operations.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for readable, reusable logic
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * Checks if the requesting user has a global admin role.
+     * The role is granted by the existence of a document in the /roles_admin collection.
+     */
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * Ensures a document exists before allowing an update or delete.
+     * Prevents operations on non-existent data.
+     */
+    function isExistingDoc() {
+      return resource != null;
+    }
+
+    /**
+     * @description Rules for user profiles. Users can create and manage their own profile. Admins have override access.
+     * @path /users/{userId}
+     * @allow (create) A new user signing up for the first time: `request.auth.uid == userId`.
+     * @deny (list) A regular user attempting to list all other users in the system.
+     * @principle Enforces document ownership and self-service profile management, while preventing data leakage through list operations.
+     */
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isSignedIn() && isOwner(userId) && isExistingDoc() && request.resource.data.id == resource.data.id;
+      allow delete: if (isSignedIn() && isOwner(userId) && isExistingDoc()) || (isAdmin() && isExistingDoc());
+    }
+
+    /**
+     * @description Rules for the collection of School Profiles. All operations are restricted to administrators.
+     * @path /school_profiles/{schoolProfileId}
+     * @allow (get) An authenticated admin reading a school's profile.
+     * @deny (create) Any non-admin user attempting to create a new school profile.
+     * @principle Centralizes control of core school data under a privileged administrative role.
+     */
+    match /school_profiles/{schoolProfileId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDoc();
+      allow delete: if isAdmin() && isExistingDoc();
+
+      /**
+       * @description Rules for academic years within a school. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/academic_years/{academicYearId}
+       * @allow (create) An admin creating a new academic year for a specific school.
+       * @deny (update) A regular user trying to modify an academic year.
+       * @principle Ensures that administrative data related to a school is managed only by administrators.
+       */
+      match /academic_years/{academicYearId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin() && request.resource.data.schoolProfileId == schoolProfileId;
+        allow update: if isAdmin() && isExistingDoc() && request.resource.data.schoolProfileId == resource.data.schoolProfileId;
+        allow delete: if isAdmin() && isExistingDoc();
+      }
+
+      /**
+       * @description Rules for teacher profiles within a school. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/teachers/{teacherId}
+       * @allow (create) An admin adding a new teacher to the school's roster.
+       * @deny (get) A teacher trying to read another teacher's profile directly.
+       * @principle Ensures that sensitive staff information is managed only by administrators.
+       */
+      match /teachers/{teacherId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin() && request.resource.data.schoolProfileId == schoolProfileId;
+        allow update: if isAdmin() && isExistingDoc() && request.resource.data.schoolProfileId == resource.data.schoolProfileId;
+        allow delete: if isAdmin() && isExistingDoc();
+      }
+
+      /**
+       * @description Rules for student profiles within a school. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/students/{studentId}
+       * @allow (list) An admin listing all students in a school.
+       * @deny (create) A parent trying to enroll their child directly into the database.
+       * @principle Protects student data by restricting management access to administrators.
+       */
+      match /students/{studentId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin() && request.resource.data.schoolProfileId == schoolProfileId;
+        allow update: if isAdmin() && isExistingDoc() && request.resource.data.schoolProfileId == resource.data.schoolProfileId;
+        allow delete: if isAdmin() && isExistingDoc();
+      }
+
+      /**
+       * @description Rules for parent profiles within a school. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/parents/{parentId}
+       * @allow (get) An admin retrieving a parent's contact information.
+       * @deny (delete) A teacher attempting to remove a parent from the system.
+       * @principle Secures parent and guardian information under administrative control.
+       */
+      match /parents/{parentId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin() && request.resource.data.schoolProfileId == schoolProfileId;
+        allow update: if isAdmin() && isExistingDoc() && request.resource.data.schoolProfileId == resource.data.schoolProfileId;
+        allow delete: if isAdmin() && isExistingDoc();
+      }
+
+      /**
+       * @description Rules for classes within a school. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/classes/{classId}
+       * @allow (create) An admin defining a new class for the upcoming school year.
+       * @deny (update) A student trying to change their assigned class.
+       * @principle Ensures the integrity of the school's class structure by restricting modifications to admins.
+       */
+      match /classes/{classId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin() && request.resource.data.schoolProfileId == schoolProfileId;
+        allow update: if isAdmin() && isExistingDoc() && request.resource.data.schoolProfileId == resource.data.schoolProfileId;
+        allow delete: if isAdmin() && isExistingDoc();
+      }
+
+      /**
+       * @description Rules for subjects offered by a school. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/subjects/{subjectId}
+       * @allow (list) An admin viewing all subjects offered by the school.
+       * @deny (create) A teacher trying to add a new subject to the curriculum.
+       * @principle Maintains the integrity of the academic curriculum by restricting changes to admins.
+       */
+      match /subjects/{subjectId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin() && request.resource.data.schoolProfileId == schoolProfileId;
+        allow update: if isAdmin() && isExistingDoc() && request.resource.data.schoolProfileId == resource.data.schoolProfileId;
+        allow delete: if isAdmin() && isExistingDoc();
+      }
+
+      /**
+       * @description Rules for assignments. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/assignments/{assignmentId}
+       * @allow (create) An admin creating an assignment on behalf of a teacher.
+       * @deny (update) A teacher attempting to modify an assignment's due date directly.
+       * @principle Restricts management of academic tasks to administrators as a secure default.
+       */
+      match /assignments/{assignmentId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin(); // Note: Cannot validate teacherId/classId without complex lookups.
+        allow update: if isAdmin() && isExistingDoc();
+        allow delete: if isAdmin() && isExistingDoc();
+
+        /**
+         * @description Rules for assignment attachments. Admin-only access.
+         * @path /school_profiles/{schoolProfileId}/assignments/{assignmentId}/attachments/{attachmentId}
+         * @allow (create) An admin adding a file to an assignment.
+         * @deny (delete) A student trying to remove an attachment.
+         * @principle Ensures that all materials related to an assignment are managed centrally by administrators.
+         */
+        match /attachments/{attachmentId} {
+          allow get: if isAdmin();
+          allow list: if isAdmin();
+          allow create: if isAdmin() && request.resource.data.assignmentId == assignmentId;
+          allow update: if isAdmin() && isExistingDoc() && request.resource.data.assignmentId == resource.data.assignmentId;
+          allow delete: if isAdmin() && isExistingDoc();
+        }
+      }
+
+      /**
+       * @description Rules for attendance records. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/attendance/{attendanceId}
+       * @allow (create) An admin recording student attendance.
+       * @deny (update) A student or parent trying to alter an attendance record.
+       * @principle Protects the integrity of official attendance records by restricting access to admins.
+       */
+      match /attendance/{attendanceId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin();
+        allow update: if isAdmin() && isExistingDoc();
+        allow delete: if isAdmin() && isExistingDoc();
+      }
+
+      /**
+       * @description Rules for exams. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/exams/{examId}
+       * @allow (create) An admin scheduling a new exam.
+       * @deny (delete) A teacher attempting to cancel an exam.
+       * @principle Centralizes the management of examinations under administrative control.
+       */
+      match /exams/{examId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin() && request.resource.data.schoolProfileId == schoolProfileId;
+        allow update: if isAdmin() && isExistingDoc() && request.resource.data.schoolProfileId == resource.data.schoolProfileId;
+        allow delete: if isAdmin() && isExistingDoc();
+
+        /**
+         * @description Rules for exam results. Admin-only access.
+         * @path /school_profiles/{schoolProfileId}/exams/{examId}/results/{resultId}
+         * @allow (create) An admin posting a student's result for an exam.
+         * @deny (update) A student trying to change their own grade.
+         * @principle Ensures the confidentiality and integrity of academic results.
+         */
+        match /results/{resultId} {
+          allow get: if isAdmin();
+          allow list: if isAdmin();
+          allow create: if isAdmin() && request.resource.data.examId == examId;
+          allow update: if isAdmin() && isExistingDoc() && request.resource.data.examId == resource.data.examId;
+          allow delete: if isAdmin() && isExistingDoc();
+        }
+      }
+
+      /**
+       * @description Rules for school notices. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/notices/{noticeId}
+       * @allow (create) An admin publishing a new school-wide notice.
+       * @deny (get) A student trying to read a notice before it is published (if draft states were implemented).
+       * @principle Ensures that official school communications are controlled and disseminated by administrators.
+       */
+      match /notices/{noticeId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin() && request.resource.data.schoolProfileId == schoolProfileId;
+        allow update: if isAdmin() && isExistingDoc() && request.resource.data.schoolProfileId == resource.data.schoolProfileId;
+        allow delete: if isAdmin() && isExistingDoc();
+      }
+
+      /**
+       * @description Rules for fee payments. Admin-only access.
+       * @path /school_profiles/{schoolProfileId}/fee_payments/{feePaymentId}
+       * @allow (create) An admin recording a fee payment from a parent.
+       * @deny (list) A user trying to list all financial transactions in the school.
+       * @principle Protects sensitive financial data by restricting all access to administrators.
+       */
+      match /fee_payments/{feePaymentId} {
+        allow get: if isAdmin();
+        allow list: if isAdmin();
+        allow create: if isAdmin();
+        allow update: if isAdmin() && isExistingDoc();
+        allow delete: if isAdmin() && isExistingDoc();
+      }
+    }
+
+    /**
+     * @description Rules for AI Model configurations. Restricted to administrators.
+     * @path /ai_models/{aiModelId}
+     * @allow (get) An admin reading the configuration for an AI model.
+     * @deny (update) Any non-admin user attempting to change an AI model's endpoint URL.
+     * @principle Secures system-level configurations, like AI model details, to prevent unauthorized changes.
+     */
+    match /ai_models/{aiModelId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDoc();
+      allow delete: if isAdmin() && isExistingDoc();
+    }
+
+    /**
+     * @description Rules for the admin roles collection. Only other admins can manage this list.
+     * @path /roles_admin/{userId}
+     * @allow (create) An existing admin granting admin privileges to another user.
+     * @deny (list) A non-admin user trying to discover who the administrators are.
+     * @principle Ensures that the power to grant or revoke administrative access is itself a privileged operation.
+     */
+    match /roles_admin/{userId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if false; // Role documents are for existence only; no data to update.
+      allow delete: if isAdmin() && isExistingDoc();
+    }
+  }
+}
